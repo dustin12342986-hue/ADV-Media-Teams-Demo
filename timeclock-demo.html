@@ -191,10 +191,16 @@
   </div>
   <div id="setupWarning" class="setup-warning"></div>
 
-  <a class="dash-link-btn" id="dashLinkBtn" href="#" target="_blank" rel="noopener">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-    Open Broadcast Checklist Dashboard
-  </a>
+  <div style="display:flex; gap:8px;">
+    <a class="dash-link-btn" id="dashLinkBtn" href="#" target="_blank" rel="noopener" style="width:auto; flex:1;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Checklist
+    </a>
+    <a class="dash-link-btn" href="adv-media-teams-demo.html" style="width:auto; flex:1; border-color:var(--border); background:var(--panel); color:var(--text-muted);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      ADV Media Teams
+    </a>
+  </div>
 
   <div class="tabs">
     <button class="tab-btn active" id="tabClock">Clock</button>
