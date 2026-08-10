@@ -38,23 +38,15 @@
   const MAX_DISTANCE_METERS = 20000000; // DEMO MODE: effectively unlimited so anyone can test clock-in from anywhere
 
   // ==========================================================================
-  // INVOICE EMAIL SETUP — one-time, ~5 minutes
-  // Static pages can't send email directly, so invoices route through
-  // Formspree (free), which forwards form submissions straight to an inbox.
-  //
-  // 1. Go to https://formspree.io and sign up free (any email works to log in
-  //    with, this does NOT need to be invoices.advmedia@gmail.com).
-  // 2. Click "+ New Form". Name it anything (e.g. "CISD Invoices").
-  // 3. Under the form's settings, set the recipient email to:
-  //        invoices.advmedia@gmail.com
-  //    Formspree will send a one-time confirmation link to that inbox,
-  //    someone with access to invoices.advmedia@gmail.com needs to click it
-  //    once before submissions will actually deliver.
-  // 4. Copy the form's endpoint URL (looks like https://formspree.io/f/xxxxxxxx)
-  //    and paste it below, replacing the placeholder.
+  // DEMO MODE: this file deliberately has no real email setup at all.
+  // Invoice submission is fully simulated (see below) — nothing sent from
+  // this demo can ever reach a real inbox.
   // ==========================================================================
-  const FORMSPREE_ENDPOINT = "https://formspree.io/f/meeybjgp";
-  const INVOICE_RECIPIENT = "invoices.advmedia@gmail.com";
+  // DEMO MODE: no real email endpoint here — the real app's Formspree
+  // endpoint (which forwards to a real inbox) has been deliberately
+  // removed from this demo so nothing it does can ever reach a real
+  // account. Invoice submission is fully simulated instead.
+  const INVOICE_RECIPIENT = "your accounting inbox";
 
   window.__fbReady = true;
 </script>
@@ -557,7 +549,7 @@ function escapeAttr(str) { return escapeHtml(str); }
 function renderInvoiceUI(entries) {
   const root = document.getElementById("viewRoot");
   const currentGame = GAMES.find((g) => g.id === state.gameId);
-  const notConfigured = FORMSPREE_ENDPOINT.includes("PASTE_YOUR_FORM_ID");
+  const notConfigured = false; // DEMO MODE: email is always simulated, never "unconfigured"
 
   let html = `<div class="invoice-card">`;
   if (notConfigured) {
@@ -592,7 +584,7 @@ function renderInvoiceUI(entries) {
     </div>
     <div class="field-block">
       <div class="label">Notes (optional)</div>
-      <textarea id="invNotesInput" rows="3" placeholder="Anything invoices.advmedia@gmail.com should know"></textarea>
+      <textarea id="invNotesInput" rows="3" placeholder="Anything the office should know"></textarea>
     </div>
     <div id="invoiceMsg"></div>
     <button class="submit-btn" id="invoiceSubmitBtn">Submit Invoice</button>
@@ -642,19 +634,15 @@ function renderInvoiceUI(entries) {
       _replyto: undefined,
     };
 
+    // DEMO MODE: no real email gets sent — the real app posts to a
+    // Formspree endpoint that forwards to a real inbox. Simulated here so
+    // nothing from this demo ever reaches a real account.
     let emailOk = false;
-    if (!FORMSPREE_ENDPOINT.includes("PASTE_YOUR_FORM_ID")) {
-      try {
-        const res = await fetch(FORMSPREE_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        emailOk = res.ok;
-        if (!res.ok) console.error("Formspree responded with an error:", await res.text());
-      } catch (e) {
-        console.error("Formspree submission failed:", e);
-      }
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      emailOk = true;
+    } catch (e) {
+      console.error("Invoice email simulation failed:", e);
     }
 
     // Always keep a record in the shared log, even if email delivery failed,
@@ -676,8 +664,6 @@ function renderInvoiceUI(entries) {
 
     if (emailOk) {
       msgEl.innerHTML = `<div class="invoice-success">✓ Sent to ${INVOICE_RECIPIENT}</div>`;
-    } else if (FORMSPREE_ENDPOINT.includes("PASTE_YOUR_FORM_ID")) {
-      msgEl.innerHTML = `<div class="invoice-success" style="background:#3A1A17;border-color:var(--red);color:#FFB3AC">Saved to the shared log, but email isn't connected yet (see setup note above), so ${INVOICE_RECIPIENT} was not notified.</div>`;
     } else {
       msgEl.innerHTML = `<div class="invoice-success" style="background:#3A1A17;border-color:var(--red);color:#FFB3AC">Saved to the shared log, but the email couldn't be sent right now. Try again, or let Dustin/Aracely know.</div>`;
     }
