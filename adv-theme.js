@@ -250,16 +250,26 @@
     { id: "mono-light", label: "Mono light", sw: "#F5F5F6", ink: "#16161A" }
   ];
 
-  // ---- Invented teams -----------------------------------------------------
-  // Made up on purpose. No real school, no real colours, no real crest. Each
-  // one is a base colour plus two letters; the palette and the mark are both
-  // built from that at runtime, which is also the honest demonstration — a new
-  // client is one colour, not a rebuild.
+  // ---- Invented clients ---------------------------------------------------
+  // Made up on purpose. No real company, no real venue, no real school, no
+  // real mark anywhere in here.
+  //
+  // They span the work rather than the sport, because the app is not a
+  // football product — it runs crews for corporate AV, touring, worship,
+  // theatre and broadcast the same way it runs a Friday night game. A demo
+  // that only showed school colours would sell it short in front of a
+  // conference centre.
+  //
+  // Each one is a name, two letters, a shape and a single colour. The palette
+  // and the mark are both built from that colour at runtime, which is the
+  // honest demonstration: a new client is one colour, not a rebuild.
   var BRANDS = [
-    { id: "ravens",    label: "Northgate",  abbr: "NG", hue: "#3B3FA0" },
-    { id: "comets",    label: "Riverside",  abbr: "RS", hue: "#C2551E" },
-    { id: "wolves",    label: "Summit",     abbr: "SM", hue: "#1C7A55" },
-    { id: "stingrays", label: "Harbor Bay", abbr: "HB", hue: "#1D6E7A" }
+    { id: "ashgrove",  label: "Ashgrove Events",   abbr: "AE", shape: "square", hue: "#3B3FA0" },
+    { id: "riverside", label: "Riverside Touring", abbr: "RT", shape: "circle", hue: "#C2551E" },
+    { id: "summit",    label: "Summit Center",     abbr: "SC", shape: "hex",    hue: "#1C7A55" },
+    { id: "harbor",    label: "Harbor Broadcast",  abbr: "HB", shape: "circle", hue: "#1D6E7A" },
+    { id: "cornerpt",  label: "Cornerpoint Church",abbr: "CP", shape: "arch",   hue: "#6B3FA0" },
+    { id: "northgate", label: "Northgate Athletics", abbr: "NG", shape: "shield", hue: "#A32232" }
   ];
   var DEFAULT_HUE = "#3B3FA0";
 
@@ -462,24 +472,47 @@
       'html[data-theme="custom-light"] { ' + lightVars(hex) + ' }';
   }
 
-  // ---- generated team mark ------------------------------------------------
+  function isLightTheme(t) {
+    t = String(t || "");
+    return t === "light" || t === "mono-light" || t === "custom-light";
+  }
+
+  // ---- generated client mark ----------------------------------------------
   // Drawn here rather than shipped as a PNG. Nothing to host, nothing to
-  // right-click and save, and no chance of a real crest ending up in the demo
+  // right-click and save, and no chance of a real logo ending up in the demo
   // repo by accident.
-  function markFor(brand, hex) {
+  //
+  // The shape varies per client on purpose. Six identical shields would read
+  // as a sports app; a square, a roundel, a hexagon and an arch read as six
+  // different businesses, which is the point being made.
+  var SHAPES = {
+    square: "M12 2 H52 A10 10 0 0 1 62 12 V52 A10 10 0 0 1 52 62 H12 A10 10 0 0 1 2 52 V12 A10 10 0 0 1 12 2 Z",
+    circle: "M32 2 A30 30 0 1 1 31.99 2 Z",
+    hex:    "M32 2 L58 17 V47 L32 62 L6 47 V17 Z",
+    arch:   "M32 2 C48 2 58 14 58 30 V62 H6 V30 C6 14 16 2 32 2 Z",
+    shield: "M32 3 L59 12 V33 C59 49 47 58 32 62 C17 58 5 49 5 33 V12 Z"
+  };
+
+  function markFor(brand, hex, onLight) {
     var p = hslOf(hex), h = p[0], s = clamp(p[1], 30, 85);
-    var deep = hslToHex(h, s, 22), mid = hslToHex(h, s, 42), lift = hslToHex(h, clamp(s, 30, 70), 72);
+    var deep = hslToHex(h, s, 22), mid = hslToHex(h, s, 42);
+    var lift = hslToHex(h, clamp(s, 30, 70), 74);
+    // The SAMPLE tag sits on the page, not on the mark, so its colour has to
+    // follow the page. The light tint that reads on a dark header washes out
+    // to nothing on a white one, and a watermark you cannot read is not a
+    // watermark.
+    var tag = onLight ? hslToHex(h, clamp(s, 30, 85), 32) : lift;
+    var path = SHAPES[brand.shape] || SHAPES.square;
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72" width="64" height="72">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 78" width="64" height="78">' +
         '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">' +
           '<stop offset="0" stop-color="' + mid + '"/><stop offset="1" stop-color="' + deep + '"/>' +
         '</linearGradient></defs>' +
-        '<path d="M32 2 L60 11 V36 C60 54 47 65 32 70 C17 65 4 54 4 36 V11 Z" fill="url(#g)" stroke="' + lift + '" stroke-width="2.5"/>' +
-        '<path d="M8 40 H56" stroke="' + lift + '" stroke-width="2" opacity="0.5"/>' +
-        '<text x="32" y="33" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" ' +
-          'font-size="21" font-weight="bold" fill="#FFFFFF">' + brand.abbr + '</text>' +
-        '<text x="32" y="55" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" ' +
-          'font-size="9" font-weight="bold" fill="' + lift + '" letter-spacing="1">DEMO</text>' +
+        '<path d="' + path + '" fill="url(#g)" stroke="' + lift + '" stroke-width="2.5"/>' +
+        '<text x="32" y="41" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" ' +
+          'font-size="22" font-weight="bold" fill="#FFFFFF">' + brand.abbr + '</text>' +
+        '<text x="32" y="74" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" ' +
+          'font-size="9" font-weight="bold" fill="' + tag + '" letter-spacing="1.4">SAMPLE</text>' +
       '</svg>';
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
@@ -499,8 +532,8 @@
       img.alt = "";
       host.appendChild(img);
     }
-    img.setAttribute("src", markFor(brand, a.hue || brand.hue));
-    img.title = brand.label + " (sample)";
+    img.setAttribute("src", markFor(brand, a.hue || brand.hue, isLightTheme(theme)));
+    img.title = brand.label + " — sample brand";
   }
 
   var ACCENTS = [
@@ -593,27 +626,22 @@
               esc(t.label) + '</button>';
           }).join("") +
         '</div>' +
-        '<div class="adv-ap-label">Team look (sample)</div><div class="adv-ap-grid">' +
+        '<div class="adv-ap-label">Client look (samples)</div><div class="adv-ap-grid">' +
           BRANDS.map(function (b) {
-            return '<button class="adv-ap-theme" data-k="theme" data-v="custom" ' +
-                'data-brand="' + b.id + '" data-hue="' + b.hue + '">' +
-                '<span class="adv-ap-sw" style="background:' + b.hue + ';color:#FFFFFF">' + esc(b.abbr) + '</span>' +
-                esc(b.label) + '</button>' +
-              '<button class="adv-ap-theme" data-k="theme" data-v="custom-light" ' +
-                'data-brand="' + b.id + '" data-hue="' + b.hue + '">' +
-                '<span class="adv-ap-sw" style="background:#FFFFFF;color:' + b.hue + '">' + esc(b.abbr) + '</span>' +
-                esc(b.label) + ' light</button>';
+            return '<button class="adv-ap-theme" data-client="' + b.id + '" data-hue="' + b.hue + '">' +
+              '<span class="adv-ap-sw" style="background:' + b.hue + ';color:#FFFFFF">' + esc(b.abbr) + '</span>' +
+              esc(b.label) + '</button>';
           }).join("") +
         '</div>' +
         '<div class="adv-ap-label">Your own colour</div>' +
         '<div class="adv-ap-wheelrow">' +
           '<input class="adv-ap-wheel" type="color" id="advApWheel" value="' + esc(a.hue || DEFAULT_HUE) + '" />' +
           '<span class="adv-ap-hex" id="advApHex">' + esc((a.hue || DEFAULT_HUE).toUpperCase()) + '</span>' +
-          '<button class="adv-ap-chip" data-k="theme" data-v="custom">Dark</button>' +
-          '<button class="adv-ap-chip" data-k="theme" data-v="custom-light">Light</button>' +
+          '<button class="adv-ap-chip" data-mode="custom">Dark</button>' +
+          '<button class="adv-ap-chip" data-mode="custom-light">Light</button>' +
         '</div>' +
         '<div class="adv-ap-note">Pick a colour and the whole app is built from it — ' +
-          'page, panels, borders and buttons. Warning colours stay fixed on purpose.</div>' +
+          'page, panels, borders and buttons, light or dark. Warning colours stay fixed on purpose.</div>' +
         '<div class="adv-ap-label">Accent</div><div class="adv-ap-row">' +
           ACCENTS.map(function (c) {
             return '<button class="adv-ap-dot" data-k="accent" data-v="' + c.id +
@@ -642,35 +670,54 @@
     // the element underneath your finger and the drag dies. So the state is
     // repainted onto the existing nodes instead.
     function sync() {
+      var custom = String(a.theme || "").indexOf("custom") === 0;
       ov.querySelectorAll("[data-k]").forEach(function (el) {
-        var on = (a[el.dataset.k] || "") === el.dataset.v;
-        if (on && el.dataset.brand) on = (a.brand || "") === el.dataset.brand;
-        if (on && el.dataset.k === "theme" && !el.dataset.brand &&
-            el.dataset.v.indexOf("custom") === 0) on = !a.brand;
-        el.classList.toggle("on", on);
+        el.classList.toggle("on", (a[el.dataset.k] || "") === el.dataset.v);
       });
-      var hx = (a.hue || DEFAULT_HUE);
+      ov.querySelectorAll("[data-client]").forEach(function (el) {
+        el.classList.toggle("on", custom && (a.brand || "") === el.dataset.client);
+      });
+      ov.querySelectorAll("[data-mode]").forEach(function (el) {
+        el.classList.toggle("on", (a.theme || "") === el.dataset.mode);
+      });
+      var hx = a.hue || DEFAULT_HUE;
       if (wheel.value.toLowerCase() !== hx.toLowerCase()) wheel.value = hx;
       hexLbl.textContent = hx.toUpperCase();
     }
 
     ov.querySelectorAll("[data-k]").forEach(function (el) {
+      el.onclick = function () { a[el.dataset.k] = el.dataset.v; apply(a); sync(); };
+    });
+
+    // A client sample keeps whichever of light or dark you were already on.
+    // Someone demoing in a bright room should not be thrown back to dark every
+    // time they try another client.
+    ov.querySelectorAll("[data-client]").forEach(function (el) {
       el.onclick = function () {
-        if (el.dataset.hue) { a.hue = el.dataset.hue; a.brand = el.dataset.brand; }
-        else if (el.dataset.k === "theme" && el.dataset.v.indexOf("custom") === 0) {
-          // The wheel is the client's own colour, not one of the samples, so
-          // the sample mark comes off with it.
-          a.brand = "";
-          if (!a.hue) a.hue = DEFAULT_HUE;
-        }
-        a[el.dataset.k] = el.dataset.v;
+        a.hue = el.dataset.hue;
+        a.brand = el.dataset.client;
+        a.theme = isLightTheme(a.theme) ? "custom-light" : "custom";
+        apply(a); sync();
+      };
+    });
+
+    // Light and dark for the client colour. These keep the sample mark — only
+    // the wheel drops it, because at that point the colour is no longer that
+    // sample's.
+    ov.querySelectorAll("[data-mode]").forEach(function (el) {
+      el.onclick = function () {
+        if (!a.hue) a.hue = DEFAULT_HUE;
+        a.theme = el.dataset.mode;
         apply(a); sync();
       };
     });
 
     function fromWheel() {
-      a.hue = wheel.value; a.brand = "";
-      if (String(a.theme || "").indexOf("custom") !== 0) a.theme = "custom";
+      a.hue = wheel.value;
+      a.brand = "";
+      if (String(a.theme || "").indexOf("custom") !== 0) {
+        a.theme = isLightTheme(a.theme) ? "custom-light" : "custom";
+      }
       apply(a); sync();
     }
     wheel.oninput = fromWheel;
