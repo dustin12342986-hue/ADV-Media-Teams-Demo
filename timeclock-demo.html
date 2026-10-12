@@ -128,6 +128,9 @@
 
 <!-- Shared appearance, used by every ADV page. Must load before this page's styles. -->
 <script src="adv-theme.js"></script>
+<!-- One sign-in for the whole demo: asked for once, then shared with
+     every other page and tab until it goes idle. -->
+<script src="demo-session.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -434,6 +437,7 @@ const DEMO = {
   OWNER_CODE: "ADV-OWNER",
   REP_CODE:   "ADV-REP",
   CLIENT_MINUTES: 30,
+  IDLE_MINUTES: 30,
   COMPANY: "ADV Media Limited Company",
   APP: "Time Clock",
 };
@@ -519,14 +523,17 @@ function demoLockDown() {
   document.addEventListener("visibilitychange", () => demoLog(document.hidden ? "left the tab" : "came back"));
 }
 function demoStartClientClock() {
-  demoSession.endsAt = Date.now() + DEMO.CLIENT_MINUTES * 60000;
+  // No local end time. The shared session owns it, so a client who moves
+  // from here to another page carries on rather than being handed a fresh
+  // half hour.
   const pill = document.createElement("div"); pill.id = "demoClock";
   pill.style.cssText = "position:fixed; top:34px; right:10px; z-index:99999; background:#1A222B;" +
     "border:1px solid #39424D; color:#E8EDF2; border-radius:999px; padding:5px 12px; font-size:12px;" +
     "font-weight:800; font-variant-numeric:tabular-nums;";
   document.body.appendChild(pill);
   const tick = () => {
-    const left = demoSession.endsAt - Date.now();
+    const ms = window.ADVDemoSession ? window.ADVDemoSession.msLeft() : null;
+    const left = ms == null ? 0 : ms;
     if (left <= 0) { demoEndSession("time"); return; }
     const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
     pill.textContent = `Demo ends in ${m}:${String(sec).padStart(2, "0")}`;
@@ -538,6 +545,7 @@ function demoStartClientClock() {
 function demoEndSession(why) {
   if (demoSession.timer) { clearInterval(demoSession.timer); demoSession.timer = null; }
   demoLog("session ended", why);
+  if (window.ADVDemoSession) window.ADVDemoSession.end(why);
   document.body.innerHTML = `
     <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0E1319;
                 color:#E8EDF2; font-family:system-ui,-apple-system,sans-serif; text-align:center; padding:28px;">
@@ -545,7 +553,9 @@ function demoEndSession(why) {
         <div style="font-size:20px; font-weight:800; margin-bottom:10px;">This demo session has ended</div>
         <div style="font-size:14px; color:#8A96A3; line-height:1.6;">
           ${why === "revoked" ? "Access for this link has been withdrawn."
-            : `Demo sessions run for ${DEMO.CLIENT_MINUTES} minutes. Ask your ADV Media contact to start another one.`}
+            : why === "idle"
+              ? `This demo closes after ${DEMO.IDLE_MINUTES} minutes with nothing happening. Open it again and enter your code.`
+              : `Demo sessions run for ${DEMO.CLIENT_MINUTES} minutes. Ask your ADV Media contact to start another one.`}
         </div>
         <div style="margin-top:22px; font-size:11px; color:#5B6672;">
           &copy; ${new Date().getFullYear()} ${DEMO.COMPANY}. ADV Media Teams&trade; &mdash; all rights reserved.<br />
@@ -560,6 +570,22 @@ function demoGate(onEnter) {
   // Only ever one gate. Booting twice would otherwise leave a second one
   // stuck over the app with nothing behind its button.
   if (document.getElementById("demoGate") || demoSession.role) return;
+
+  // When it ends anywhere, it ends here too. Subscribed before the resume
+  // below, which returns early: a tab that picked up a running session used
+  // to never hear about that session ending in another tab.
+  if (window.ADVDemoSession && !window.__advDemoWatching) {
+    window.__advDemoWatching = true;
+    window.ADVDemoSession.onChange(function (sess, why) {
+      if (sess && !demoSession.role) { demoResume(sess, onEnter); return; }
+      if (!sess && demoSession.role) demoEndSession(why === "idle" ? "idle" : why);
+    });
+  }
+
+  // Signed in already, on another page or in another tab. The code is asked
+  // for once for the whole demo, not once per page.
+  const live = window.ADVDemoSession && window.ADVDemoSession.get();
+  if (live) { demoResume(live, onEnter); return; }
   const g = document.createElement("div");
   g.id = "demoGate";
   g.style.cssText = "position:fixed; inset:0; z-index:100000; background:#0E1319; color:#E8EDF2;" +
@@ -596,15 +622,12 @@ function demoGate(onEnter) {
       demoSession.role = "rep"; demoSession.id = demoSessionId();
       g.remove(); demoEndSession("revoked"); return;
     }
-    demoSession.role = role;
-    demoSession.id = demoSessionId();
+    const sess = window.ADVDemoSession
+      ? window.ADVDemoSession.start(role)
+      : { role: role, id: demoSessionId() };
     demoLog("session started", role);
     g.remove();
-    demoMountWatermark();
-    demoLockDown();
-    if (role === "client") demoStartClientClock();
-    demoMountReset();
-    if (typeof onEnter === "function") onEnter(role);
+    demoResume(sess, onEnter);
   };
   g.querySelector("#dgClient").onclick = () => enter("client");
   g.querySelector("#dgGo").onclick = () => {
@@ -617,6 +640,21 @@ function demoGate(onEnter) {
   g.querySelector("#dgCode").addEventListener("keydown", (e) => {
     if (e.key === "Enter") g.querySelector("#dgGo").click();
   });
+}
+
+// Everything that happens after someone is let in, whether they just typed
+// the code or arrived with a session already running.
+function demoResume(sess, onEnter) {
+  const first = !demoSession.role;
+  demoSession.role = sess.role;
+  demoSession.id = sess.id;
+  const g = document.getElementById("demoGate");
+  if (g) g.remove();
+  demoMountWatermark();
+  if (first) demoLockDown();
+  if (sess.role === "client") demoStartClientClock();
+  demoMountReset();
+  if (typeof onEnter === "function") onEnter(sess.role);
 }
 
 // ---- the same in-memory database the main demo uses ------------------------

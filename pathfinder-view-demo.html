@@ -199,8 +199,12 @@
   }
   .foot { font-size:10.5px; color:var(--text-faint); line-height:1.6; text-align:center; padding:22px 14px 30px; }
 </style>
-<!-- Shared appearance, so the finder matches whatever page is framing it. -->
+<!-- Shared appearance, so this matches whatever page is framing it. -->
 <script src="adv-theme.js"></script>
+<!-- Same origin as the page framing this, so the same session record. A tap
+     in here is activity, and without it a rep who spent twenty-five minutes
+     in Pathfinder was signed out for sitting still. -->
+<script src="demo-session.js"></script>
 </head>
 <body>
 <div id="root"></div>

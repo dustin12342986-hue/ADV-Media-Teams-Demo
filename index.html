@@ -228,6 +228,9 @@
 
 <!-- Shared appearance, used by every ADV page. Loads before our styles. -->
 <script src="adv-theme.js"></script>
+<!-- One sign-in for the whole demo: asked for once, then shared with
+     every other page and tab until it goes idle. -->
+<script src="demo-session.js"></script>
 <style>
   /* Colours, fonts and sizing live in adv-theme.js so every page matches. */
   * { box-sizing: border-box; }
@@ -1758,6 +1761,7 @@ const DEMO = {
   OWNER_CODE: "ADV-OWNER",     // you: full access, plus the Activity screen
   REP_CODE:   "ADV-REP",       // your salesman: full access, no timer, killable
   CLIENT_MINUTES: 30,          // how long a client session runs before it closes
+  IDLE_MINUTES: 30,            // and how long any session survives with nothing happening
   COMPANY: "ADV Media Limited Company",
 };
 
@@ -1901,7 +1905,9 @@ function demoFlash(msg) {
 
 // ---- the clock on a client session ----------------------------------------
 function demoStartClientClock() {
-  demoSession.endsAt = Date.now() + DEMO.CLIENT_MINUTES * 60000;
+  // No local end time. The shared session owns it, so a client who moves
+  // between pages carries on rather than being handed a fresh half hour.
+  if (document.getElementById("demoClock")) return;
   const pill = document.createElement("div");
   pill.id = "demoClock";
   pill.style.cssText =
@@ -1911,7 +1917,8 @@ function demoStartClientClock() {
   document.body.appendChild(pill);
 
   const tick = () => {
-    const left = demoSession.endsAt - Date.now();
+    const ms = window.ADVDemoSession ? window.ADVDemoSession.msLeft() : null;
+    const left = ms == null ? 0 : ms;
     if (left <= 0) { demoEndSession("time"); return; }
     const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
     pill.textContent = `Demo ends in ${m}:${String(sec).padStart(2, "0")}`;
@@ -1925,6 +1932,7 @@ function demoStartClientClock() {
 function demoEndSession(why) {
   if (demoSession.timer) { clearInterval(demoSession.timer); demoSession.timer = null; }
   demoLog("session ended", why);
+  if (window.ADVDemoSession) window.ADVDemoSession.end(why);
   document.body.innerHTML = `
     <div style="min-height:100vh; display:flex; align-items:center; justify-content:center;
                 background:#0E1319; color:#E8EDF2; font-family:system-ui,-apple-system,sans-serif;
@@ -1934,7 +1942,9 @@ function demoEndSession(why) {
         <div style="font-size:14px; color:#8A96A3; line-height:1.6;">
           ${why === "revoked"
             ? "Access for this link has been withdrawn."
-            : `Demo sessions run for ${DEMO.CLIENT_MINUTES} minutes. Ask your ADV Media contact to start another one.`}
+            : why === "idle"
+              ? `This demo closes after ${DEMO.IDLE_MINUTES} minutes with nothing happening. Open it again and enter your code.`
+              : `Demo sessions run for ${DEMO.CLIENT_MINUTES} minutes. Ask your ADV Media contact to start another one.`}
         </div>
         <div style="margin-top:22px; font-size:11px; color:#5B6672;">
           &copy; ${new Date().getFullYear()} ${DEMO.COMPANY}. ADV Media Teams&trade; &mdash; all rights reserved.<br />
@@ -2295,8 +2305,46 @@ function handleGoogleCredential(response) {
   }
 }
 
+// Everything that happens once someone is in, whether they just typed the
+// code or arrived with a session already running on another page.
+function demoResume(sess) {
+  const first = !demoSession.role;
+  demoSession.role = sess.role;
+  demoSession.id = sess.id;
+  demoSession.startedAt = sess.startedAt || Date.now();
+  demoMountWatermark();
+  if (first) demoLockDown();
+  if (sess.role === "client") demoStartClientClock();
+  demoMountReset();
+
+  currentUser = {
+    uid: "demo-admin",
+    email: "demo@advmedia.example",
+    displayName: sess.role === "client" ? "Guest" : "Demo Admin",
+    getIdToken: () => Promise.resolve("demo-token"),
+  };
+  auth.currentUser = currentUser;
+  checkApprovalAndBoot(currentUser);
+}
+
 function renderAuthScreen() {
   if (typeof rosUnmountMonitor === "function") rosUnmountMonitor();
+
+  // When it ends anywhere, it ends here too. Subscribed before the resume
+  // below, which returns early: a tab that picked up a running session used
+  // to never hear about that session ending in another tab.
+  if (window.ADVDemoSession && !window.__advDemoWatching) {
+    window.__advDemoWatching = true;
+    window.ADVDemoSession.onChange(function (sess, why) {
+      if (sess && !demoSession.role) { demoResume(sess); return; }
+      if (!sess && demoSession.role) demoEndSession(why === "idle" ? "idle" : why);
+    });
+  }
+
+  // Signed in already, on another page or in another tab. The code is asked
+  // for once for the whole demo, not once per page.
+  const live = window.ADVDemoSession && window.ADVDemoSession.get();
+  if (live && !demoSession.role) { demoResume(live); return; }
   if (typeof scrStopLoop === "function") scrStopLoop();
   const root = document.getElementById("viewRoot");
   root.innerHTML = `
@@ -2333,23 +2381,11 @@ function renderAuthScreen() {
       demoEndSession("revoked");
       return;
     }
-    demoSession.role = role;
-    demoSession.id = demoSessionId();
-    demoSession.startedAt = Date.now();
+    const sess = window.ADVDemoSession
+      ? window.ADVDemoSession.start(role)
+      : { role: role, id: demoSessionId(), startedAt: Date.now() };
     demoLog("session started", role);
-    demoMountWatermark();
-    demoLockDown();
-    if (role === "client") demoStartClientClock();
-    demoMountReset();
-
-    currentUser = {
-      uid: "demo-admin",
-      email: "demo@advmedia.example",
-      displayName: role === "client" ? "Guest" : "Demo Admin",
-      getIdToken: () => Promise.resolve("demo-token"),
-    };
-    auth.currentUser = currentUser;
-    checkApprovalAndBoot(currentUser);
+    demoResume(sess);
   };
 
   document.getElementById("demoStartClient").onclick = () => enter("client");
