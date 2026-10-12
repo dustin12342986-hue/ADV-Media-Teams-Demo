@@ -1251,6 +1251,10 @@
   <div id="setupWarning" class="setup-warning"></div>
 
   <div class="nav-links">
+    <a class="nav-link-btn" href="how-to-demo.html" style="border-color:var(--blue); color:var(--blue);">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-3 2.3-3 4"/><path d="M12 17.5h.01"/></svg>
+      How to use
+    </a>
     <a class="nav-link-btn" href="timeclock-demo.html">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Time Clock
@@ -2357,6 +2361,9 @@ function renderAuthScreen() {
       <div class="footnote" style="margin-top:10px; text-align:center;">
         Sample data only. The session closes automatically after ${DEMO.CLIENT_MINUTES} minutes.
       </div>
+      <a href="how-to-demo.html" style="display:block; text-align:center; margin-top:14px;
+         font-size:13px; font-weight:700; color:var(--blue); text-decoration:none;">
+        How to use this &rarr;</a>
       <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
         <div class="label" style="margin-bottom:6px;">ADV Media staff</div>
         <div style="display:flex; gap:8px;">
@@ -10046,7 +10053,7 @@ function rosRender() {
       <button class="ghost-pill" id="rosFullToggle" title="Full screen">${rosFull ? "Exit" : "⛶"}</button>
       <button class="ghost-pill" id="rosScriptBtn" title="The announcer's read copy"
         style="border-color:#8B72D9; color:#B9A6F0;">📖 Script</button>
-      <a class="ghost-pill" href="https://dustin12342986-hue.github.io/ADV-Media-Broadcast-Checklist/producer-guide.html"
+      <a class="ghost-pill" href="how-to-demo.html"
          style="text-decoration:none;">Guide</a>
     </div>
     <div id="rosDocs"></div>
