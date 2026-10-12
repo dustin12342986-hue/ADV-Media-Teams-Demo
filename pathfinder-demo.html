@@ -15,21 +15,32 @@
   It is one file on purpose. Drop it in the demo repo on its own and it runs.
 -->
 <style>
+  /* Fallback only. adv-theme.js loads after this and redefines the same
+     variables at the same specificity, so the shared theme wins wherever it
+     is present. These values are what the page falls back to when the file
+     is opened on its own, which is why they are the dark set: dark is the
+     shared theme's default too. --mono is ours; the shared theme has no
+     monospace variable. */
   :root {
-    --bg:#f4f5f7; --panel:#ffffff; --panel2:#eef0f4; --border:#d7dae1;
-    --text:#14161a; --text-muted:#525862; --text-faint:#80868f;
-    --accent:#1f6feb; --accent-ink:#ffffff;
-    --ok:#1a7f4b; --ok-bg:#e6f4ec; --warn-bg:#fdf3e0; --warn-ink:#7a5218;
-    --shadow:0 1px 3px rgba(0,0,0,.09), 0 8px 24px rgba(0,0,0,.06);
-    --font: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  :root[data-theme="dark"] {
     --bg:#0f1115; --panel:#171a20; --panel2:#1f232b; --border:#2b303a;
     --text:#e8eaed; --text-muted:#a2a9b4; --text-faint:#747c88;
     --accent:#4d8dfc; --accent-ink:#06101f;
-    --ok:#4ec98a; --ok-bg:#15291f; --warn-bg:#2a2214; --warn-ink:#e3bf80;
+    --warn-bg:#2a2214; --warn-ink:#e3bf80;
     --shadow:0 1px 3px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.4);
+    --font: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  /* html[...] and not :root[...], so this matches the shared theme's own
+     selector exactly. At equal specificity the later rule wins, and the
+     theme's style element is appended after this one. Written as :root the
+     fallback outranked the real theme and the light background came out a
+     shade off on this page alone. */
+  html[data-theme="light"] {
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#eef0f4; --border:#d7dae1;
+    --text:#14161a; --text-muted:#525862; --text-faint:#80868f;
+    --accent:#1f6feb; --accent-ink:#ffffff;
+    --warn-bg:#fdf3e0; --warn-ink:#7a5218;
+    --shadow:0 1px 3px rgba(0,0,0,.09), 0 8px 24px rgba(0,0,0,.06);
   }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { margin:0; padding:0; min-height:100%; }
@@ -46,9 +57,11 @@
   .bar h1 { font-size:14.5px; font-weight:800; margin:0; letter-spacing:.2px; }
   .bar .sub { font-size:11px; color:var(--text-faint); margin-top:1px; }
   .brand-logo { height:30px; width:auto; flex:0 0 auto; }
-  /* The mark is light grey, so it disappears against a white bar. */
-  :root[data-theme="light"] .brand-logo,
-  :root[data-theme="light"] .gate-logo { filter:invert(1) brightness(.4); }
+  /* The mark is light grey and vanishes on a light background. The shared
+     theme already inverts .brand-logo for every light theme it knows about,
+     including the generated ones, so the gate logo carries that class too
+     and this rule only has to cover the standalone fallback. */
+  html[data-theme="light"] .brand-logo { filter:invert(1) brightness(.4); }
   .bar-spacer { margin-left:auto; }
   .pill {
     background:var(--panel2); border:1px solid var(--border); color:var(--text);
@@ -181,6 +194,11 @@
   }
   .foot { font-size:10.5px; color:var(--text-faint); line-height:1.6; text-align:center; padding:22px 14px 30px; }
 </style>
+<!-- The appearance picker, shared with the other demo pages. It stores the
+     choice under one key for the whole site, so a theme set on any page is
+     the theme on all of them. Missing, this page still runs on its own
+     fallback colours. -->
+<script src="adv-theme.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -285,7 +303,7 @@ function typeWords(t) { return D.types[t] || t; }
 function renderGate() {
   el("root").innerHTML =
     '<div class="gate-wrap"><div class="gate">' +
-      '<img class="gate-logo" src="' + LOGO + '" alt="ADV Media" />' +
+      '<img class="gate-logo brand-logo" src="' + LOGO + '" alt="ADV Media" />' +
       '<h2>Pathfinder</h2>' +
       '<p>Every cable, panel, rack and drawing for a venue, in one place, on a phone, ' +
         'with no signal needed. This is a sample venue built for the demo.</p>' +
@@ -350,7 +368,7 @@ function renderApp() {
       '<div><h1>Pathfinder</h1><div class="sub">' + esc(D.venue) + '</div></div>' +
       '<span class="tag">Demo</span>' +
       '<div class="bar-spacer"></div>' +
-      '<button class="pill" id="themeBtn">Dark</button>' +
+      '<button class="pill" id="themeBtn">Appearance</button>' +
       '<button class="pill" id="outBtn">Leave</button>' +
     '</div>' +
     (timed
@@ -388,13 +406,23 @@ function renderApp() {
 }
 
 function toggleTheme() {
-  const now = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", now);
+  // One picker for the whole demo. Changing it here changes the Time Clock,
+  // the Checklist and the main app too, because they all read the same key.
+  if (window.ADVTheme && typeof window.ADVTheme.open === "function") {
+    window.ADVTheme.open();
+    return;
+  }
+  // Opened on its own, with no theme file next to it.
+  const now = document.documentElement.getAttribute("data-theme") === "light" ? "" : "light";
+  if (now) document.documentElement.setAttribute("data-theme", now);
+  else document.documentElement.removeAttribute("data-theme");
   syncThemeLabel();
 }
 function syncThemeLabel() {
   const b = el("themeBtn");
-  if (b) b.textContent = document.documentElement.getAttribute("data-theme") === "dark" ? "Light" : "Dark";
+  if (!b) return;
+  if (window.ADVTheme) { b.textContent = "Appearance"; return; }
+  b.textContent = document.documentElement.getAttribute("data-theme") === "light" ? "Dark" : "Light";
 }
 
 function draw() {
@@ -715,10 +743,14 @@ function viewWords() {
 
 /* =================================================================== go */
 (function () {
-  try {
-    const prefers = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    document.documentElement.setAttribute("data-theme", prefers ? "dark" : "light");
-  } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+  // With the shared theme file present it has already applied whatever was
+  // chosen last, on this page or any other, and nothing here should touch it.
+  if (!window.ADVTheme) {
+    try {
+      const light = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+      if (light) document.documentElement.setAttribute("data-theme", "light");
+    } catch (e) { /* leave the dark default */ }
+  }
   renderGate();
 })();
 </script>

@@ -25,7 +25,7 @@
   // This file becomes the main entry point (index.html). The checklist app
   // lives alongside it in the same folder as checklist.html, so a relative
   // path works no matter what the site's domain/username is.
-  const CHECKLIST_APP_URL = "checklist.html";
+  const CHECKLIST_APP_URL = "checklist-demo.html";
 
   // Crew must be physically at the stadium to clock in — checked against
   // these coordinates every time someone taps Clock In.
@@ -251,6 +251,10 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
     Open Broadcast Checklist Dashboard
   </a>
+
+  <!-- The appearance picker is in adv-theme.js and stores one setting for
+       every page, so changing it here changes the other demos too. -->
+  <button type="button" class="dash-link-btn" data-adv-appearance title="Appearance" aria-label="Appearance">Aa &middot; Appearance</button>
 
   <div class="tabs">
     <button class="tab-btn active" id="tabClock">Clock</button>
