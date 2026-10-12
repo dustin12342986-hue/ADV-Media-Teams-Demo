@@ -77,6 +77,7 @@
 <!-- One sign-in for the whole demo: asked for once, then shared with
      every other page and tab until it goes idle. -->
 <script src="demo-session.js"></script>
+<script src="demo-clients.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -269,25 +270,11 @@
 // ============================================================================
 // Data
 // ============================================================================
-const GAMES = (function () {
-  // Same week as the other two demo apps, worked out from today.
-  const d = (o) => { const t = new Date(); t.setDate(t.getDate() + o);
-    return { id: `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`,
-      day: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][t.getDay()], date: `${t.getMonth() + 1}/${t.getDate()}` }; };
-  const mk = (o, opp, x) => Object.assign(d(o), { opp }, x || {});
-  return [
-    mk(-9,  "Gaylord Texan \u2014 Sales Kickoff (Show)", { gameTime: "9:00 AM", call: "5:00 AM" }),
-    mk(-8,  "Gaylord Texan \u2014 Sales Kickoff (Strike)", { call: "4:00 PM" }),
-    mk(-2,  "Riverside Prep vs Lincoln Academy", { gameTime: "7:00 PM", call: "4:30 PM" }),
-    mk(0,   "Hilton Anatole \u2014 Product Launch (Show)", { gameTime: "6:30 PM", call: "1:00 PM" }),
-    mk(2,   "Riverside Prep vs Kennedy High", { gameTime: "7:00 PM", call: "4:30 PM" }),
-    mk(9,   "Gaylord Texan \u2014 Awards Gala (Load-in)", { call: "7:00 AM" }),
-    mk(10,  "Gaylord Texan \u2014 Awards Gala (Show)", { gameTime: "7:30 PM", call: "2:00 PM" }),
-    mk(16,  "Riverside Prep vs Franklin Central", { gameTime: "7:00 PM" }),
-  ];
-})();
+// The schedule belongs to whichever client is selected, so this page shows the
+// same week as the app next to it.
+const GAMES = window.ADVDemoClient ? window.ADVDemoClient.events() : [];
 
-const POSITIONS = {
+const FOOTBALL_POSITIONS = {
   "camera-lead": { qc: [
       "Wait until all equipment is checked back in — this is the final hour, with A1",
       "Inspect every camera cable end to end",
@@ -467,6 +454,22 @@ const POSITIONS = {
     post: ["Confirm all department leads have completed post-shift checklist",
       "Debrief with PM after wrap"] },
 };
+const POSITIONS = (function () {
+  const c = window.ADVDemoClient && window.ADVDemoClient.get();
+  if (!c || c.id === "northgate") return FOOTBALL_POSITIONS;
+  const slug = (n) => n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const out = {};
+  (c.positions || []).forEach((p) => {
+    out[slug(p.name)] = {
+      label: p.name,
+      readyLabel: p.name + " ready",
+      pre: p.items.slice(),
+      post: ["Return everything you signed out", "Report anything damaged in the app"],
+    };
+  });
+  return out;
+})();
+
 const POSITION_KEYS = Object.keys(POSITIONS);
 
 // Maps the free-text position labels used in the companion time-clock app
@@ -681,6 +684,11 @@ function demoGate(onEnter) {
         Start the ${DEMO.CLIENT_MINUTES}-minute demo</button>
       <div style="font-size:11.5px; color:#8A96A3; text-align:center; margin-top:9px;">
         Sample data only. Closes automatically after ${DEMO.CLIENT_MINUTES} minutes.</div>
+      <button type="button" data-adv-client style="width:100%; margin-top:12px; padding:11px 0;
+        border-radius:9px; cursor:pointer; background:#1A222B; border:1px solid #39424D;
+        color:#E8EDF2; font-size:13px; font-weight:800; font-family:inherit;"></button>
+      <div style="font-size:11px; color:#8A96A3; text-align:center; margin-top:6px;">
+        Sports, corporate, live music or theatre. The whole demo follows it.</div>
       <div style="text-align:center; margin-top:13px;">
         <a href="how-to-demo.html" style="font-size:12.5px; font-weight:700; color:#6FA8D6; text-decoration:none;">How to use this &rarr;</a>
       </div>
@@ -846,44 +854,17 @@ async function demoSeed(db) {
 // constant, because the three files do not share those.
 
 // The same week in all three, worked out from today.
+// Used when the demo files share a throwaway database. It reads from the one
+// shared client file, so the two copies cannot drift apart.
 function demoGames() {
-  const d = (o) => {
-    const t = new Date(); t.setDate(t.getDate() + o);
-    return {
-      id: `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`,
-      day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][t.getDay()],
-      date: `${t.getMonth() + 1}/${t.getDate()}`,
-    };
-  };
-  const mk = (o, opp, x) => Object.assign(d(o), { opp }, x || {});
-  return [
-    mk(-9, "Gaylord Texan — Sales Kickoff (Show)", { gameTime: "9:00 AM", call: "5:00 AM" }),
-    mk(-8, "Gaylord Texan — Sales Kickoff (Strike)", { call: "4:00 PM" }),
-    mk(-2, "Riverside Prep vs Lincoln Academy", { gameTime: "7:00 PM", call: "4:30 PM" }),
-    mk(0, "Hilton Anatole — Product Launch (Show)",
-       { gameTime: "6:30 PM", call: "1:00 PM", roleCalls: { "Audio A2/Utility": "12:00 PM" } }),
-    mk(2, "Riverside Prep vs Kennedy High", { gameTime: "7:00 PM", call: "4:30 PM" }),
-    mk(9, "Gaylord Texan — Awards Gala (Load-in)", { call: "7:00 AM" }),
-    mk(10, "Gaylord Texan — Awards Gala (Show)", { gameTime: "7:30 PM", call: "2:00 PM" }),
-    mk(16, "Riverside Prep vs Franklin Central", { gameTime: "7:00 PM" }),
-  ];
+  return window.ADVDemoClient ? window.ADVDemoClient.events() : [];
 }
 
-const DEMO_CREW = [
-  ["u-sam", "Sam Rivera", "Sam", "817-555-0110", "EIC"],
-  ["u-jordan", "Jordan Blake", "Jordan", "817-555-0111", "PM"],
-  ["u-taylor", "Taylor Morgan", "Taylor", "817-555-0112", "Director"],
-  ["u-casey", "Casey Nguyen", "Casey", "817-555-0113", "Producer"],
-  ["u-avery", "Avery Stone", "Avery", "817-555-0114", "Shader"],
-  ["u-morgan", "Morgan Lee", "Morgan", "817-555-0115", "Clips"],
-  ["u-alex", "Alex Chen", "Alex", "817-555-0116", "Replay"],
-  ["u-jamie", "Jamie Ortiz", "Jamie", "817-555-0117", "Camera 1"],
-  ["u-riley", "Riley Patel", "Riley", "817-555-0118", "Camera 2"],
-  ["u-drew", "Drew Sanchez", "Drew", "817-555-0119", "Camera 3"],
-  ["u-priya", "Priya Raman", "Priya", "817-555-0120", "Camera 4"],
-  ["u-quinn", "Quinn Foster", "Quinn", "817-555-0121", "Audio A1"],
-  ["u-devon", "Devon Clark", "Devon", "817-555-0122", "Audio A2/Utility"],
-];
+const DEMO_CREW = (window.ADVDemoClient ? window.ADVDemoClient.people() : []).map(
+  function (pp, i) {
+    var roles = window.ADVDemoClient ? window.ADVDemoClient.get().crew : [];
+    return [pp.uid, pp.name, pp.handle, pp.phone, roles[i] || "Utility"];
+  });
 const DEMO_ROLES = ["Director", "Producer", "Shader", "Clips", "Replay",
   "Camera 1", "Camera 2", "Camera 3", "Camera 4", "Audio A1", "Audio A2/Utility"];
 
@@ -984,33 +965,32 @@ async function demoSeedAll(db) {
 
   const done = (n) => { const o = {}; for (let i = 0; i < n; i++) o[i] = true; return o; };
 
-  const cues = [
-    { section: "PRE-SHOW", time: "5:30 PM", dur: "30:00", event: "Doors", screen: "Walk-in loop", ribbon: "Sponsor reel", audio: "Playback" },
-    { section: "PRE-SHOW", time: "6:20 PM", dur: "5:00", event: "Seating chimes", screen: "Countdown", audio: "Playback" },
-    { section: "SHOW", time: "6:30 PM", dur: "2:00", event: "Open video", screen: "Open VT", audio: "VT",
-      read: "Ladies and gentlemen, please welcome to the stage, your host for the evening." },
-    { section: "SHOW", time: "6:32 PM", dur: "8:00", event: "Host welcome", screen: "IMAG", audio: "Host mic",
-      read: "Good evening and welcome to the Anatole. Thank you all for being here tonight." },
-    { section: "SHOW", time: "6:40 PM", dur: "20:00", event: "Keynote", screen: "Presentation", audio: "Lav 1" },
-    { section: "SHOW", time: "7:00 PM", dur: "15:00", event: "Product reveal", screen: "Reveal VT", audio: "VT",
-      read: "And now, the moment we have all been waiting for." },
-    { section: "CLOSE", time: "7:15 PM", dur: "5:00", event: "Close and thanks", screen: "IMAG", audio: "Host mic",
-      read: "That is all from us tonight. Travel safely, and we will see you next year." },
-    { section: "CLOSE", time: "7:20 PM", dur: "40:00", event: "Walk-out / strike begins", screen: "Sponsor loop", audio: "Playback" },
-  ];
-  const scriptText = [
-    "PRODUCT LAUNCH — HILTON ANATOLE", "",
-    "6:30 pm OPEN",
-    "Ladies and gentlemen, please welcome to the stage, your host for the evening.", "",
-    "6:32 pm HOST WELCOME",
-    "Good evening and welcome to the Anatole. Thank you all for being here tonight.",
-    "We have a short programme for you, and then the floor is yours.", "",
-    "6:40 pm KEYNOTE", "Please welcome our chief executive.", "",
-    "7:00 pm PRODUCT REVEAL", "And now, the moment we have all been waiting for.", "",
-    "CLOSE", "That is all from us tonight. Travel safely, and we will see you next year.", "",
-    "EMERGENCY",
-    "Attention. Please make your way to the nearest exit and follow the directions of venue staff.",
-  ].join("\n");
+  const cues = (((window.ADVDemoClient ? window.ADVDemoClient.get() : null) ? window.ADVDemoClient.get().cues : []) || []).map(function (c) {
+    var row = { section: c.section, event: c.event };
+    if (c.time) row.time = c.time;
+    if (c.dur) row.dur = c.dur;
+    if (c.read) row.read = c.read;
+    if (c.screen) row.screen = c.screen;
+    if (c.audio) row.audio = c.audio;
+    return row;
+  });
+  const scriptText = (function () {
+    var c = (window.ADVDemoClient ? window.ADVDemoClient.get() : null);
+    var lines = [];
+    lines.push((c ? c.name.toUpperCase() + " \u2014 " + c.venue.toUpperCase() : "SAMPLE CLIENT"));
+    lines.push("");
+    var section = "";
+    ((c ? c.cues : []) || []).forEach(function (q) {
+      if (q.section !== section) { section = q.section; lines.push(section.toUpperCase()); }
+      lines.push((q.time ? q.time + "  " : "") + q.event);
+      if (q.read) lines.push(q.read);
+      lines.push("");
+    });
+    lines.push("EMERGENCY");
+    lines.push("Attention. Please make your way to the nearest exit and follow the " +
+               "directions of venue staff.");
+    return lines.join("\n");
+  })();
   const scriptCues = (typeof splitScriptIntoCues === "function")
     ? splitScriptIntoCues(scriptText).filter((c) => !c.isSection) : [];
 
@@ -1026,8 +1006,10 @@ async function demoSeedAll(db) {
       l1: { type: "drop", role: "Shader", name: "Avery Stone", reason: "Double Booking", at: iso(1, 11, 5) },
       l2: { type: "pickup", role: "Camera 3", name: "Drew Sanchez", at: iso(2, 16, 42) } } },
     clientEvents: { [id(5) + "__demo01"]: {
-      name: "Gaylord Texan — Awards Gala (Load-in)", client: "Gaylord",
-      venue: "Gaylord Texan, Grapevine", day: G[5].day, date: G[5].date, callTime: "7:00 AM",
+      name: G[5].opp,
+      client: (window.ADVDemoClient ? window.ADVDemoClient.get() : null) ? window.ADVDemoClient.get().name : "Sample client",
+      venue: (window.ADVDemoClient ? window.ADVDemoClient.get() : null) ? window.ADVDemoClient.get().venue : "Sample venue",
+      day: G[5].day, date: G[5].date, callTime: G[5].call || "7:00 AM",
       roles: ["Director", "Camera 1", "Camera 2", "Audio A1", "Stagehand 1", "Stagehand 2"],
       createdAt: iso(4, 10, 0) } },
     confirmations: { [id(3)]: conf },
@@ -1075,16 +1057,19 @@ async function demoSeedAll(db) {
     runOfShow: {
       [id(3)]: { cues, current: 3 },
       [id(2)]: { cues: [
-        { section: "PRE-GAME", time: "6:15 PM", event: "Welcome", audio: "Announcer",
-          read: "Good evening and welcome to Riverside Prep." },
+        ...(((window.ADVDemoClient ? window.ADVDemoClient.get() : null) ? window.ADVDemoClient.get().cues : []) || []).slice(0, 3).map(
+          function (c) {
+            return { section: c.section, time: c.time, event: c.event,
+                     audio: c.audio || "", read: c.read || "" };
+          }),
         { section: "PRE-GAME", time: "6:40 PM", event: "Anthem", audio: "Announcer" },
         { section: "1ST QUARTER", time: "7:00 PM", event: "Kickoff", screen: "Live" },
       ], current: 2 },
-      _scripts: { [id(3)]: { text: scriptText, name: "Anatole-Launch-Script.docx",
+      _scripts: { [id(3)]: { text: scriptText, name: ((window.ADVDemoClient ? window.ADVDemoClient.get() : null) ? window.ADVDemoClient.get().venueShort : "Sample") + "-Script.docx",
         at: iso(1, 16, 0), by: "Demo Admin", cues: scriptCues, current: 2 } },
     },
     showSettings: { primaryCode: null, scriptCode: null },
-    gameSettings: { __venue: { lat: 32.7935, lng: -96.8008, label: "Hilton Anatole, Dallas" } },
+    gameSettings: { __venue: { lat: 32.7935, lng: -96.8008, label: (window.ADVDemoClient ? window.ADVDemoClient.get() : null) ? window.ADVDemoClient.get().venue : "Sample venue" } },
     demoMeta: { seededAt: new Date().toISOString(), day: new Date().toISOString().slice(0, 10) },
   };
 

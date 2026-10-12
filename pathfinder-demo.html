@@ -125,6 +125,7 @@
 <!-- One sign-in for the whole demo. The code is asked for once and the
      session is shared with every other page and tab until it goes idle. -->
 <script src="demo-session.js"></script>
+<script src="demo-clients.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -218,6 +219,7 @@ function renderGate() {
       '<button class="go" id="startClient">Start the ' + DEMO.CLIENT_MINUTES + "-minute demo</button>" +
       '<div style="margin-top:10px; text-align:center; font-size:11.5px; color:var(--text-faint);">' +
         "Sample data only. The session closes itself after " + DEMO.CLIENT_MINUTES + " minutes.</div>" +
+      '<button type="button" data-adv-client class="ghost" style="margin-top:12px;"></button>' +
       '<div style="text-align:center; margin-top:13px;">' +
         '<a href="how-to-demo.html" style="font-size:12.5px; font-weight:700; ' +
         'color:var(--accent); text-decoration:none;">How to use this &rarr;</a></div>' +
