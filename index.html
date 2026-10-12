@@ -1256,10 +1256,6 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Checklist
     </a>
-    <a class="nav-link-btn" href="pathfinder-demo.html" style="border-color:var(--blue); color:var(--blue);">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
-      Pathfinder
-    </a>
   </div>
 
   <div id="viewRoot"><div class="footnote">Connecting…</div></div>
@@ -1269,6 +1265,12 @@
 // ============================================================================
 // Skills / departments
 // ============================================================================
+// Pathfinder is a tab in this app, not a page beside it. The tab frames the
+// finder; pathfinder-demo.html frames the same file behind an access code,
+// and that is the copy a visiting EIC gets.
+const PATHFINDER_SRC = "pathfinder-view-demo.html";
+const PATHFINDER_HANDOUT = "pathfinder-demo.html";
+
 const SKILLS = ["Audio", "Video", "Camera", "Lighting", "Stage", "Graphics", "Directing", "Producing", "Replay", "Utility"];
 
 // ============================================================================
@@ -2541,6 +2543,7 @@ function renderMainApp() {
       <button class="tab-btn ${mainState.view === "runofshow" ? "active" : ""}" id="tabRunOfShow">Run of Show</button>
       <button class="tab-btn ${mainState.view === "script" ? "active" : ""}" id="tabScript">Script</button>
       <button class="tab-btn ${mainState.view === "cables" ? "active" : ""}" id="tabCables">Gear</button>
+      <button class="tab-btn ${mainState.view === "pathfinder" ? "active" : ""}" id="tabPathfinder">Pathfinder</button>
       <button class="tab-btn ${mainState.view === "shifts" ? "active" : ""}" id="tabShifts">Shifts</button>
       <button class="tab-btn ${mainState.view === "myinvoices" ? "active" : ""}" id="tabMyInvoices">My Invoices</button>
       <button class="tab-btn ${mainState.view === "equipment" ? "active" : ""}" id="tabEquipment">Equipment</button>
@@ -2609,6 +2612,7 @@ function renderMainApp() {
   document.getElementById("tabShifts").onclick = () => { mainState.view = "shifts"; mainState.adminMenuOpen = false; renderMainApp(); };
   document.getElementById("tabMyInvoices").onclick = () => { mainState.view = "myinvoices"; mainState.adminMenuOpen = false; renderMainApp(); };
   document.getElementById("tabEquipment").onclick = () => { mainState.view = "equipment"; mainState.adminMenuOpen = false; renderMainApp(); };
+  document.getElementById("tabPathfinder").onclick = () => { mainState.view = "pathfinder"; mainState.adminMenuOpen = false; renderMainApp(); };
   if (admin) {
     document.getElementById("tabAdminMenu").onclick = () => { mainState.adminMenuOpen = !mainState.adminMenuOpen; renderMainApp(); };
     document.querySelectorAll(".admin-menu-item").forEach((btn) => {
@@ -2662,6 +2666,12 @@ function renderMainApp() {
   if (mainState.view === "equipment") {
     if (unsubProfile) { unsubProfile(); unsubProfile = null; }
     renderEquipmentSubmit();
+    return;
+  }
+
+  if (mainState.view === "pathfinder") {
+    if (unsubProfile) { unsubProfile(); unsubProfile = null; }
+    renderPathfinderView();
     return;
   }
 
@@ -6386,6 +6396,100 @@ function openCaseSheet(id, c) {
       catch (e) { alert("Couldn't save: " + (e.message || "unknown error")); }
     };
   });
+}
+
+
+// ============================================================================
+// Pathfinder
+// ============================================================================
+// The finder is its own file and this tab frames it, which is how the real one
+// works: the same file is framed by pathfinder-demo.html behind an access
+// code, so a visiting EIC can be handed a link without being added to the
+// roster. Two frames, one copy of the finder, nothing to keep in step.
+
+function pathfinderFitFrame() {
+  const f = document.getElementById("pfFrame");
+  if (!f) return false;
+  // Divide the zoom back out. At L or XL the frame is scaled with everything
+  // else, so measuring in screen pixels overshoots and the page grows a
+  // second scrollbar.
+  let z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fs"));
+  if (!z || isNaN(z)) z = 1;
+  const top = f.getBoundingClientRect().top;
+  f.style.height = Math.max(420, (window.innerHeight - top - 18) / z) + "px";
+  return true;
+}
+
+// One listener for the life of the page. It takes itself off the first time it
+// wakes up and finds the tab gone, so switching tabs does not leave a pile of
+// handlers measuring an element that no longer exists.
+function pathfinderWatchResize() {
+  if (window.__pfResizeWired) return;
+  window.__pfResizeWired = true;
+  window.addEventListener("resize", function onResize() {
+    if (!pathfinderFitFrame()) {
+      window.removeEventListener("resize", onResize);
+      window.__pfResizeWired = false;
+    }
+  });
+}
+
+function renderPathfinderView() {
+  const inner = document.getElementById("innerRoot");
+  const staff = demoSession.role === "owner" || demoSession.role === "rep";
+
+  inner.innerHTML = `
+    <div class="footnote" style="margin-bottom:12px;">
+      Venue signal paths. Search a jack, a panel, a rack or a room and it walks the whole
+      chain. This is a sample venue, so every room, box, wire number and drawing sheet in
+      it was made up for the demo.
+    </div>
+    <div style="margin-bottom:12px;">
+      <a class="ghost-pill" style="text-decoration:none; display:inline-block;"
+         href="${PATHFINDER_SRC}" target="_blank" rel="noopener">Open full screen &#8599;</a>
+    </div>
+    <div id="pfShare"></div>
+    <div id="pfBody"></div>
+  `;
+
+  if (staff) {
+    const url = new URL(PATHFINDER_HANDOUT, location.href).href;
+    document.getElementById("pfShare").innerHTML = `
+      <div style="background:var(--panel2); border:1px solid var(--border); border-radius:12px;
+                  padding:14px; margin-bottom:14px;">
+        <div class="label" style="margin-bottom:6px;">Hand-out link for another EIC</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <input id="pfUrl" readonly value="${escapeAttr(url)}"
+            style="flex:1 1 240px; min-width:0; padding:10px 12px; border-radius:10px;
+                   background:var(--panel); border:1px solid var(--border); color:var(--text);
+                   font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px;" />
+          <button class="ghost-pill" id="pfCopyUrl">Copy link</button>
+        </div>
+        <div class="footnote" style="margin-top:8px;">
+          No login on that page. It asks for an access code instead, so it can go to a visiting
+          EIC without adding them to the roster. In the live app this is also where you change
+          that code.
+        </div>
+      </div>
+    `;
+    document.getElementById("pfCopyUrl").onclick = () => {
+      const el = document.getElementById("pfUrl");
+      el.select();
+      const btn = document.getElementById("pfCopyUrl");
+      const done = () => { btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy link"; }, 1400); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(el.value).then(done, done);
+      } else { try { document.execCommand("copy"); } catch (e) {} done(); }
+    };
+  }
+
+  document.getElementById("pfBody").innerHTML = `
+    <iframe id="pfFrame" title="Pathfinder" src="${PATHFINDER_SRC}"
+      style="width:100%; height:520px; border:1px solid var(--border);
+             border-radius:12px; background:var(--panel); display:block;"></iframe>
+  `;
+  pathfinderFitFrame();
+  pathfinderWatchResize();
 }
 
 // Appearance lives in adv-theme.js so every page shares one setting. The
