@@ -239,9 +239,9 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     Back to ADV Media Teams
   </a>
-  <a class="back-link-btn" href="how-to-demo.html">
+  <a class="back-link-btn" href="how-to-demo.html" id="repGuideLink" hidden>
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-3 2.3-3 4"/><path d="M12 17.5h.01"/></svg>
-    How to use
+    Running the demo
   </a>
   <a class="back-link-btn" href="timeclock-demo.html">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -523,6 +523,7 @@ const DEMO = {
   REP_CODE:   "ADV-REP",
   CLIENT_MINUTES: 30,
   IDLE_MINUTES: 30,
+  STAFF_MINUTES: 60,
   COMPANY: "ADV Media Limited Company",
   APP: "Broadcast Checklist",
 };
@@ -639,7 +640,7 @@ function demoEndSession(why) {
         <div style="font-size:14px; color:#8A96A3; line-height:1.6;">
           ${why === "revoked" ? "Access for this link has been withdrawn."
             : why === "idle"
-              ? `This demo closes after ${DEMO.IDLE_MINUTES} minutes with nothing happening. Open it again and enter your code.`
+              ? `This demo closes after ${demoSession.role === "client" ? DEMO.IDLE_MINUTES : DEMO.STAFF_MINUTES} minutes with nothing happening. Open it again and enter your code.`
               : `Demo sessions run for ${DEMO.CLIENT_MINUTES} minutes. Ask your ADV Media contact to start another one.`}
         </div>
         <div style="margin-top:22px; font-size:11px; color:#5B6672;">
@@ -689,9 +690,6 @@ function demoGate(onEnter) {
         color:#E8EDF2; font-size:13px; font-weight:800; font-family:inherit;"></button>
       <div style="font-size:11px; color:#8A96A3; text-align:center; margin-top:6px;">
         Sports, corporate, live music or theatre. The whole demo follows it.</div>
-      <div style="text-align:center; margin-top:13px;">
-        <a href="how-to-demo.html" style="font-size:12.5px; font-weight:700; color:#6FA8D6; text-decoration:none;">How to use this &rarr;</a>
-      </div>
       <div style="margin-top:18px; padding-top:16px; border-top:1px solid #29313A;">
         <div style="font-size:11px; font-weight:800; color:#8A96A3; text-transform:uppercase; margin-bottom:6px;">ADV Media staff</div>
         <div style="display:flex; gap:8px;">
@@ -739,6 +737,9 @@ function demoGate(onEnter) {
 // the code or arrived with a session already running.
 function demoResume(sess, onEnter) {
   const first = !demoSession.role;
+  // The rep's notes are staff only. A client session never sees the link.
+  const guide = document.getElementById("repGuideLink");
+  if (guide) guide.hidden = !(sess.role === "owner" || sess.role === "rep");
   demoSession.role = sess.role;
   demoSession.id = sess.id;
   const g = document.getElementById("demoGate");

@@ -1262,9 +1262,10 @@
            any template literal, so a ${...} here would print as written. -->
       <span data-adv-client-name>Client</span>
     </button>
-    <a class="nav-link-btn" href="how-to-demo.html" style="border-color:var(--blue); color:var(--blue);">
+    <a class="nav-link-btn" id="repGuideLink" href="how-to-demo.html" hidden
+       style="border-color:var(--blue); color:var(--blue);">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-3 2.3-3 4"/><path d="M12 17.5h.01"/></svg>
-      How to use
+      Running the demo
     </a>
     <a class="nav-link-btn" href="timeclock-demo.html">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1762,7 +1763,8 @@ const DEMO = {
   OWNER_CODE: "ADV-OWNER",     // you: full access, plus the Activity screen
   REP_CODE:   "ADV-REP",       // your salesman: full access, no timer, killable
   CLIENT_MINUTES: 30,          // how long a client session runs before it closes
-  IDLE_MINUTES: 30,            // and how long any session survives with nothing happening
+  IDLE_MINUTES: 30,            // and how long a client session survives with nothing happening
+  STAFF_MINUTES: 60,           // owner or rep: an hour of quiet before it drops them
   COMPANY: "ADV Media Limited Company",
 };
 
@@ -1944,7 +1946,7 @@ function demoEndSession(why) {
           ${why === "revoked"
             ? "Access for this link has been withdrawn."
             : why === "idle"
-              ? `This demo closes after ${DEMO.IDLE_MINUTES} minutes with nothing happening. Open it again and enter your code.`
+              ? `This demo closes after ${demoSession.role === "client" ? DEMO.IDLE_MINUTES : DEMO.STAFF_MINUTES} minutes with nothing happening. Open it again and enter your code.`
               : `Demo sessions run for ${DEMO.CLIENT_MINUTES} minutes. Ask your ADV Media contact to start another one.`}
         </div>
         <div style="margin-top:22px; font-size:11px; color:#5B6672;">
@@ -2288,6 +2290,10 @@ function handleGoogleCredential(response) {
 // code or arrived with a session already running on another page.
 function demoResume(sess) {
   const first = !demoSession.role;
+  // The rep's notes are staff only, so the link appears only once somebody is
+  // in with a code. A client session never sees it.
+  const guide = document.getElementById("repGuideLink");
+  if (guide) guide.hidden = !(sess.role === "owner" || sess.role === "rep");
   demoSession.role = sess.role;
   demoSession.id = sess.id;
   demoSession.startedAt = sess.startedAt || Date.now();
@@ -2343,9 +2349,6 @@ function renderAuthScreen() {
       <div class="footnote" style="margin-top:6px; text-align:center;">
         Sports, corporate, live music or theatre. The whole demo follows it.
       </div>
-      <a href="how-to-demo.html" style="display:block; text-align:center; margin-top:14px;
-         font-size:13px; font-weight:700; color:var(--blue); text-decoration:none;">
-        How to use this &rarr;</a>
       <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
         <div class="label" style="margin-bottom:6px;">ADV Media staff</div>
         <div style="display:flex; gap:8px;">
@@ -10043,8 +10046,9 @@ function rosRender() {
       <button class="ghost-pill" id="rosFullToggle" title="Full screen">${rosFull ? "Exit" : "⛶"}</button>
       <button class="ghost-pill" id="rosScriptBtn" title="The announcer's read copy"
         style="border-color:#8B72D9; color:#B9A6F0;">📖 Script</button>
-      <a class="ghost-pill" href="how-to-demo.html"
-         style="text-decoration:none;">Guide</a>
+      ${(demoSession.role === "owner" || demoSession.role === "rep")
+        ? `<a class="ghost-pill" href="how-to-demo.html" style="text-decoration:none;">Guide</a>`
+        : ""}
     </div>
     <div id="rosDocs"></div>
     ${rosIsPrimary() ? `
